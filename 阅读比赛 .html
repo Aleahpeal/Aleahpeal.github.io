@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的遗愿清单 - 阅读比赛</title>
+    <style>
+        /* 全局样式重置与基础设置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        /* 容器样式，居中且限制最大宽度 */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        /* 输入区域样式 */
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* 结果展示区样式 */
+        .result-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            display: none; /* 默认隐藏，计算后显示 */
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .result-text {
+            font-size: 18px;
+            color: #333;
+            line-height: 1.8;
+            white-space: pre-wrap; /* 保留空格，适配单行格式 */
+        }
+
+        /* 历史记录区样式 */
+        .history-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .history-item {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .history-item .date {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-top: 5px;
+            width: auto;
+        }
+
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        /* 响应式适配，手机端调整样式 */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .result-text {
+                font-size: 16px;
+                white-space: pre-line; /* 手机端自动换行，保证可读性 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>我的遗愿清单 - 阅读比赛</h1>
+
+        <!-- 输入区域：替换为长井 -->
+        <div class="input-section">
+            <div class="form-group">
+                <label for="my-time">我的阅读时长（小时）：</label>
+                <input type="number" id="my-time" placeholder="请输入数字，例如：10.5" step="0.1" min="0">
+            </div>
+            <div class="form-group">
+                <label for="friend-time">长井的阅读时长（小时）：</label>
+                <input type="number" id="friend-time" placeholder="请输入数字，例如：15.2" step="0.1" min="0">
+            </div>
+            <button id="calculate-btn">计算并记录</button>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div class="result-section" id="result-section">
+            <h3>计算结果</h3>
+            <div class="result-text" id="result-text"></div>
+        </div>
+
+        <!-- 历史记录区域 -->
+        <div class="history-section">
+            <h3>历史记录</h3>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // 获取页面元素
+        const myTimeInput = document.getElementById('my-time');
+        const friendTimeInput = document.getElementById('friend-time');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const resultSection = document.getElementById('result-section');
+        const resultText = document.getElementById('result-text');
+        const historyList = document.getElementById('history-list');
+
+        // 固定年龄差：长井比你大12岁，换算成天数（12×365）
+        const AGE_DIFF_DAYS = 12 * 365; // 4380天
+
+        // 初始化：加载本地存储的历史记录
+        loadHistory();
+
+        // 计算按钮点击事件
+        calculateBtn.addEventListener('click', function() {
+            // 获取输入值并转换为数字
+            const myTime = parseFloat(myTimeInput.value);
+            const friendTime = parseFloat(friendTimeInput.value);
+
+            // 验证输入是否有效
+            if (isNaN(myTime) || isNaN(friendTime)) {
+                alert('请输入有效的阅读时长数字！');
+                return;
+            }
+
+            // 计算核心数据
+            const diffTime = friendTime - myTime; // 相差时长（正数表示长井领先，负数表示你领先）
+            // 按12年（4380天）的年龄差计算每日需要多阅读的时长
+            const catchUpPerDay = diffTime > 0 ? (diffTime / AGE_DIFF_DAYS).toFixed(4) : 0;
+
+            // 获取当前日期并格式化（YYYY年MM月DD日）
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始，补0
+            const day = String(now.getDate()).padStart(2, '0'); // 日期补0
+            const currentDate = `${year}年${month}月${day}日`;
+
+            // 拼接单行固定格式结果文本
+            let resultContent = "";
+            if (diffTime > 0) {
+                resultContent = `【${currentDate}     相差：${diffTime.toFixed(2)}小时    每天多阅读${catchUpPerDay}小时，就能慢慢追平啦】`;
+            } else if (diffTime < 0) {
+                resultContent = `【${currentDate}     相差：${diffTime.toFixed(2)}小时    你目前领先${Math.abs(diffTime).toFixed(2)}小时，无需额外追赶】`;
+            } else {
+                resultContent = `【${currentDate}     相差：0.00小时    你们的阅读时长相同，太有默契了！】`;
+            }
+
+            // 显示结果
+            resultText.textContent = resultContent; // 用textContent保证格式不被解析，保留空格
+            resultSection.style.display = 'block';
+
+            // 保存记录到本地存储
+            saveRecord({
+                date: currentDate,
+                myTime: myTime.toFixed(2),
+                friendTime: friendTime.toFixed(2),
+                diffTime: diffTime.toFixed(2),
+                catchUpPerDay: catchUpPerDay,
+                result: resultContent
+            });
+
+            // 重新加载历史记录
+            loadHistory();
+
+            // 清空输入框
+            myTimeInput.value = '';
+            friendTimeInput.value = '';
+        });
+
+        // 保存记录到localStorage
+        function saveRecord(record) {
+            // 获取已有记录，若无则创建空数组
+            let history = JSON.parse(localStorage.getItem('readingCompetition')) || [];
+            // 添加新记录到数组开头
+            history.unshift(record);
+            // 保存回localStorage
+            localStorage.setItem('readingCompetition', JSON.stringify(history));
+        }
+
+        // 加载历史记录并渲染到页面
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem('readingCompetition')) || [];
+            // 清空历史列表
+            historyList.innerHTML = '';
+
+            // 遍历记录并生成DOM元素
+            history.forEach((item, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="date">记录时间：${item.date}</div>
+                    <div style="font-size:16px; color:#333;">${item.result}</div>
+                    <button class="delete-btn" data-index="${index}">删除这条记录</button>
+                `;
+                historyList.appendChild(historyItem);
+
+                // 绑定删除按钮事件
+                historyItem.querySelector('.delete-btn').addEventListener('click', function() {
+                    deleteRecord(index);
+                });
+            });
+
+            // 若无记录，显示提示
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">暂无阅读比赛记录</div>';
+            }
+        }
+
+        // 删除指定索引的记录
+        function deleteRecord(index) {
+            let history = JSON.parse(localStorage.getItem('readingCompetition')) || [];
+            // 删除指定索引的元素
+            history.splice(index, 1);
+            // 保存修改后的记录
+            localStorage.setItem('readingCompetition', JSON.stringify(history));
+            // 重新加载历史
+            loadHistory();
+        }
+    </script>
+</body>
+</html>
